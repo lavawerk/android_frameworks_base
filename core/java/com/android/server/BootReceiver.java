@@ -24,6 +24,7 @@ import android.os.Build;
 import android.os.DropBoxManager;
 import android.os.Environment;
 import android.os.FileObserver;
+import android.os.FileObserverRecursiv;
 import android.os.FileUtils;
 import android.os.RecoverySystem;
 import android.os.RemoteException;
@@ -48,6 +49,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -62,7 +64,7 @@ import java.util.regex.Pattern;
  * Performs a number of miscellaneous, non-system-critical actions
  * after the system has finished booting.
  */
-public class BootReceiver extends BroadcastReceiver {
+public class BootReceiver extends BroadcastReceiver /*implements FileObserverRecursiv.Eventlistener*/ {
     private static final String TAG = "BootReceiver";
 
     private static final String TAG_TRUNCATED = "[[TRUNCATED]]\n";
@@ -76,6 +78,9 @@ public class BootReceiver extends BroadcastReceiver {
     private static final int GMSCORE_LASTK_LOG_SIZE = 196608;
 
     private static final File TOMBSTONE_DIR = new File("/data/tombstones");
+    private static final File RFKILL_DIR = new File("/sys/class/bluetooth");
+    private static final File HCI_DIR = new File("/sys/class/bluetooth/hci0");
+
     private static final String TAG_TOMBSTONE = "SYSTEM_TOMBSTONE";
 
     // The pre-froyo package and class of the system updater, which
@@ -88,6 +93,8 @@ public class BootReceiver extends BroadcastReceiver {
 
     // Keep a reference to the observer so the finalizer doesn't disable it.
     private static FileObserver sTombstoneObserver = null;
+    private static FileObserver sRfkillObserver = null;
+    private static FileObserver sRfkillObserver2 = null;
 
     private static final String LOG_FILES_FILE = "log-files.xml";
     private static final AtomicFile sFile = new AtomicFile(new File(
@@ -280,6 +287,39 @@ public class BootReceiver extends BroadcastReceiver {
         };
 
         sTombstoneObserver.startWatching();
+
+/*
+        sRfkillObserver = new FileObserver(RFKILL_DIR.getPath(), FileObserver.ALL_EVENTS | FileObserver.IN_DONT_FOLLOW) {
+            @Override
+            public void onEvent(int event, String path) {
+                Slog.d(TAG, "sRfkillObserver new event: " + event + " path: " + path);
+                if (path == null) return;
+                String hciName = "";
+                String rfkillName = "";
+                File file = new File(RFKILL_DIR, path);
+                if (file.isDirectory() && file.getName().startsWith("hci")) {
+                    hciName = file.getName();
+                    File[] directories = file.listFiles(new FileFilter() {
+                        @Override
+                        public boolean accept(File subdir) {
+                            if (subdir.isDirectory() && subdir.getName().startsWith("rfkill")) {
+                                return true;
+                            }
+                            return false;
+                        }
+                    });
+                    for (File f: directories) {
+                        if (f.getName().startsWith("rfkill")) {
+                            rfkillName = f.getName();
+                        }
+                    }
+                }
+                SystemProperties.set("sys.bt.path", rfkillName);
+                Slog.d(TAG, "new rfkill dir created: " + hciName + "/" + rfkillName);
+            }
+        };
+        Slog.d(TAG, "sRfkillObserver started for " + RFKILL_DIR.getPath());
+        sRfkillObserver.startWatching();*/
     }
 
     private static void addLastkToDropBox(

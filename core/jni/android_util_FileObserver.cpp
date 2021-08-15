@@ -73,13 +73,17 @@ static void android_os_fileobserver_observe(JNIEnv* env, jobject object, jint fd
         {
             int event_size;
             event = (struct inotify_event *)(event_buf + event_pos);
-
+/*
+    for (char* ptr = buff; ptr < buff + length; ptr += sizeof(struct inotify_event) + event->len) {
+        event = (const struct inotify_event *) ptr;
+*/
             jstring path = NULL;
-
             if (event->len > 0)
             {
                 path = env->NewStringUTF(event->name);
             }
+            //ScopedUtfChars pathString(env, path);
+            ALOGD("android_os_fileobserver_observe: event->name %s\n", /*pathString.c_str(),*/ event->name);
 
             env->CallVoidMethod(object, method_onEvent, event->wd, event->mask, path);
             if (env->ExceptionCheck()) {
@@ -119,6 +123,7 @@ static void android_os_fileobserver_startWatching(JNIEnv* env, jobject object, j
 
             ScopedUtfChars path(env, pathString);
 
+            ALOGD("android_os_fileobserver_startWatching: path.c_str(): %s mask %d\n", path.c_str(), mask);
             wfds[i] = inotify_add_watch(fd, path.c_str(), mask);
         }
     }

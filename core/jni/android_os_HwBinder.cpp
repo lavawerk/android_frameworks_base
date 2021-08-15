@@ -325,6 +325,11 @@ static jobject JHwBinder_native_getService(
         serviceName = str.c_str();
     }
 
+    LOG(INFO) << "Looking for service "
+              << ifaceName
+              << "/"
+              << serviceName;
+
     sp<IBase> ret = getRawServiceInternal(ifaceName, serviceName, retry /* retry */, false /* getStub */);
     sp<hardware::IBinder> service = hardware::toBinder<hidl::base::V1_0::IBase>(ret);
 

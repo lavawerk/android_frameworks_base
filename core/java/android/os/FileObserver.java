@@ -92,6 +92,8 @@ public abstract class FileObserver {
     /** Event type: The monitored file or directory was moved; monitoring continues */
     public static final int MOVE_SELF = 0x00000800;
 
+    public static final int IN_DONT_FOLLOW = 0x02000000;
+
     /** Event mask: All valid event types, combined */
     @NotifyEventType
     public static final int ALL_EVENTS = ACCESS | MODIFY | ATTRIB | CLOSE_WRITE
@@ -123,6 +125,7 @@ public abstract class FileObserver {
             final int[] wfds = new int[count];
             Arrays.fill(wfds, -1);
 
+            Log.d(LOG_TAG, "startWatching paths: " + paths);
             startWatching(m_fd, paths, mask, wfds);
 
             final WeakReference<FileObserver> fileObserverWeakReference =
@@ -145,6 +148,7 @@ public abstract class FileObserver {
         @UnsupportedAppUsage
         public void onEvent(int wfd, @NotifyEventType int mask, String path) {
             // look up our observer, fixing up the map if necessary...
+            Log.d(LOG_TAG, "onEvent1 path: " + path);
             FileObserver observer = null;
 
             synchronized (m_observers) {
@@ -160,6 +164,7 @@ public abstract class FileObserver {
             // ...then call out to the observer without the sync lock held
             if (observer != null) {
                 try {
+                    Log.d(LOG_TAG, "onEvent2 path: " + path);
                     observer.onEvent(mask, path);
                 } catch (Throwable throwable) {
                     Log.wtf(LOG_TAG, "Unhandled exception in FileObserver " + observer, throwable);
